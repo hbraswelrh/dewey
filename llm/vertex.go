@@ -17,22 +17,12 @@ import (
 )
 
 const (
-	// vertexSynthTimeout allows large curation prompts enough time to complete.
-	vertexSynthTimeout = 300 * time.Second
-	// vertexSynthMaxTokens accommodates curation extractions that exceed 4K tokens.
-	vertexSynthMaxTokens = 16000
 	// vertexSynthMaxRetries is the maximum number of retry attempts on 429 responses.
 	vertexSynthMaxRetries = 5
 	// vertexSynthBaseDelay is the initial backoff delay before the first retry.
 	vertexSynthBaseDelay = 1 * time.Second
 	// vertexSynthMaxDelay caps the exponential backoff to prevent excessive waits.
 	vertexSynthMaxDelay = 60 * time.Second
-	// vertexSynthTimeout is the HTTP client timeout for Vertex AI requests.
-	// Large curation prompts (36K+ tokens) need ~120-180s for response generation.
-	vertexSynthTimeout = 300 * time.Second
-	// vertexSynthMaxTokens is the maximum output tokens for Vertex AI responses.
-	// Curation extractions routinely exceed 4K tokens; 16K provides headroom.
-	vertexSynthMaxTokens = 16000
 )
 
 // VertexSynthesizer implements Synthesizer using Google Vertex AI's rawPredict API.
@@ -92,7 +82,7 @@ func NewVertexSynthesizer(project, region, model string) (*VertexSynthesizer, er
 		region:  region,
 		model:   model,
 		client: &http.Client{
-			Timeout: vertexSynthTimeout,
+			Timeout: 300 * time.Second, // increased from 120s — large curation prompts (36K+ tokens) need ~120-180s
 		},
 		checkExpiry: 30 * time.Second,
 	}
@@ -130,7 +120,7 @@ func (v *VertexSynthesizer) defaultGetToken(ctx context.Context) (string, error)
 func (v *VertexSynthesizer) Synthesize(ctx context.Context, prompt string) (string, error) {
 	reqBody := vertexSynthRequest{
 		AnthropicVersion: "vertex-2023-10-16",
-		MaxTokens:        vertexSynthMaxTokens,
+		MaxTokens:        16000, // increased from 4096 — curation extractions routinely exceed 4K tokens
 		Messages: []vertexMessage{
 			{Role: "user", Content: prompt},
 		},
